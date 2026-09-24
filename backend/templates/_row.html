@@ -3,4 +3,9 @@
   <td>{{ row.score }}</td>
   <td class="{% if row.verdict == '通过' %}pass{% else %}fail{% endif %}">{{ row.verdict }}</td>
   <td>{{ row.note }}</td>
+  <td>
+    {% if row.liquor_digest %}
+      <a href="{{ url_for('snapshots', cupping_id=row.id) }}">{{ row.liquor_digest }}</a>
+    {% else %}—{% endif %}
+  </td>
 </tr>

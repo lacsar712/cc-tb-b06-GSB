@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>汤色留影</h1>
+<p>留影不落大图，只存服务端按说明句算出的摘要短串；改说明句不会改动已存短串，换短串须重新上传并留覆盖备忘。</p>
+
+<nav class="snap-nav">
+  {% for row in all_rows %}
+    <a class="snap-chip {% if cupping and cupping.id == row.id %}active{% endif %} {% if row.verdict != '通过' %}fail{% endif %}"
+       href="{{ url_for('snapshots', cupping_id=row.id) }}">
+      #{{ row.id }} {{ row.lot }}（{{ row.verdict }}）
+    </a>
+  {% endfor %}
+</nav>
+
+{% if cupping %}
+<section class="snap-detail">
+  <h2>#{{ cupping.id }} {{ cupping.lot }} — {{ cupping.verdict }}</h2>
+
+  {% if cupping.liquor_digest %}
+    <div class="current-snap">
+      <h3>当前有效留影</h3>
+      <p class="digest">{{ cupping.liquor_digest }}</p>
+      <p class="caption">说明句：{{ cupping.caption }}</p>
+      <p class="meta">最近上传：{{ cupping.snapshot_by }} · {{ cupping.updated_at }}</p>
+    </div>
+  {% else %}
+    <p>该审评尚无留影。</p>
+  {% endif %}
+
+  {% if can_write and cupping.verdict == '通过' %}
+    <form method="post" action="{{ url_for('upload_snapshot', cupping_id=cupping.id) }}">
+      <h3>{% if cupping.liquor_digest %}重新上传（覆盖，旧短串入备忘）{% else %}挂汤色留影{% endif %}</h3>
+      <input name="caption" placeholder="汤色说明句" required style="width:60%" />
+      <button>上传留影</button>
+    </form>
+  {% elif cupping.verdict != '通过' %}
+    <p class="fail">不通过行禁止挂留影。</p>
+  {% else %}
+    <p>观察员只能查看留影与备忘，不能上传。</p>
+  {% endif %}
+
+  <h3>覆盖备忘</h3>
+  {% if memos %}
+  <table>
+    <thead><tr><th>时刻</th><th>操作者</th><th>旧短串</th><th>新短串</th></tr></thead>
+    <tbody>
+      {% for m in memos %}
+      <tr>
+        <td>{{ m.changed_at }}</td>
+        <td>{{ m.changed_by }}</td>
+        <td class="old-digest">{{ m.old_digest }}</td>
+        <td>{{ m.new_digest }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>暂无覆盖备忘。</p>
+  {% endif %}
+</section>
+{% else %}
+<p>请从上方选择审评编号查看留影与备忘。</p>
+{% endif %}
+{% endblock %}

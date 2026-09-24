@@ -33,6 +33,31 @@ def main():
             created_by text NOT NULL
         )"""
     )
+    # 汤色留影：只落由说明句算出的摘要短串，不存大图文件。
+    # 一个审评只保留当前有效短串；覆盖历史进 liquor_snapshot_memos。
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS liquor_snapshots (
+            cupping_id integer PRIMARY KEY REFERENCES cuppings(id),
+            caption text NOT NULL,
+            digest text NOT NULL,
+            created_by text NOT NULL,
+            updated_at timestamptz NOT NULL DEFAULT now()
+        )"""
+    )
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS liquor_snapshot_memos (
+            id serial PRIMARY KEY,
+            cupping_id integer NOT NULL REFERENCES cuppings(id),
+            old_digest text,
+            new_digest text NOT NULL,
+            changed_by text NOT NULL,
+            changed_at timestamptz NOT NULL DEFAULT now()
+        )"""
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_liquor_memos_cupping "
+        "ON liquor_snapshot_memos (cupping_id, changed_at DESC)"
+    )
     cur.execute("SELECT COUNT(*) FROM cuppings")
     if cur.fetchone()[0] == 0:
         for lot, aroma, taste, liquor in (("春茶-A", 8, 8, 7), ("夏茶-C", 5, 4, 6)):
