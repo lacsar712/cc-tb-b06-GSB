@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>汤色留影专页</h2>
+<p>留影只落库服务端按说明句算出的摘要短串，不收大图文件。短串一经上传即冻结；改正说明句不会改动已存短串，换短串必须重新上传。</p>
+
+<form method="get" action="{{ url_for('snapshots_page') }}">
+  <label>按审评编号查阅：
+    <input name="cupping" type="number" min="1" value="{{ cupping_query or '' }}" required />
+  </label>
+  <button>查阅</button>
+</form>
+
+<h3>各审评行</h3>
+<table>
+  <thead><tr><th>编号</th><th>批次</th><th>结论</th><th>当前有效留影短串</th><th></th></tr></thead>
+  <tbody>
+    {% for r in all_rows %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.lot }}</td>
+      <td class="{% if r.verdict == '通过' %}pass{% else %}fail{% endif %}">{{ r.verdict }}</td>
+      <td>{{ r.liquor_summary or '—' }}</td>
+      <td><a href="{{ url_for('snapshots_page', cupping=r.id) }}">翻留影与备忘</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if not_found %}
+  <p class="fail">找不到该审评编号。</p>
+{% elif focus %}
+<section>
+  <h3>审评 #{{ focus.id }}：{{ focus.lot }}（<span class="{% if focus.verdict == '通过' %}pass{% else %}fail{% endif %}">{{ focus.verdict }}</span>）</h3>
+
+  <h4>当前有效留影</h4>
+  {% if focus.liquor_summary %}
+    <table>
+      <tr><th>摘要短串</th><td>{{ focus.liquor_summary }}</td></tr>
+      <tr><th>上传时说明句</th><td>{{ focus.shot_sentence }}</td></tr>
+      <tr><th>上传者</th><td>{{ focus.shot_by }}</td></tr>
+      <tr><th>上传时刻</th><td>{{ focus.shot_at.strftime('%Y-%m-%d %H:%M:%S %Z') }}</td></tr>
+    </table>
+  {% else %}
+    <p>尚未挂留影。</p>
+  {% endif %}
+
+  {% if can_write %}
+    {% if focus.verdict == '通过' %}
+    <form method="post" action="{{ url_for('upload_snapshot', cupping_id=focus.id) }}">
+      <h4>{% if focus.liquor_summary %}再上传覆盖短串{% else %}挂汤色留影{% endif %}</h4>
+      <p>短串由服务端依据下面的说明句当场算出并落库；若覆盖已有短串，系统会把旧短串写入覆盖备忘。</p>
+      <textarea name="sentence" rows="3" cols="60" required
+        placeholder="汤色说明句，例如：橙黄明亮，金圈显，冷后微浑。">{{ focus.shot_sentence or '' }}</textarea>
+      <button>{% if focus.liquor_summary %}再上传并覆盖（写入备忘）{% else %}上传留影{% endif %}</button>
+    </form>
+    {% else %}
+    <p class="fail">该行为“不通过”，禁止挂汤色留影。</p>
+    {% endif %}
+  {% elif not focus.liquor_summary %}
+    <p>观察员仅可查看；该行暂无留影。</p>
+  {% endif %}
+
+  <h4>覆盖备忘</h4>
+  {% if overrides %}
+  <table>
+    <thead><tr><th>时刻</th><th>操作者</th><th>旧短串</th><th>新短串</th></tr></thead>
+    <tbody>
+      {% for o in overrides %}
+      <tr>
+        <td>{{ o.changed_at.strftime('%Y-%m-%d %H:%M:%S %Z') }}</td>
+        <td>{{ o.operator }}</td>
+        <td class="fail">{{ o.old_summary }}</td>
+        <td class="pass">{{ o.new_summary }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>暂无覆盖备忘。</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
